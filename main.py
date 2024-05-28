@@ -134,96 +134,76 @@ def get_selected_row_table2(event):
 
 def on_select(event):
     select_item = table2.selection()[0]
-    values = table2.item(select_item, option='values')
+    select_item_table1 = table.selection()[0]
+    if select_item:
+        values = table2.item(select_item, option='values')
+    table.selection_remove(select_item_table1)
     print(values, select_item[-1:])
 
 
 def update_data():
-    # id_item = table2.focus()
-    # selected = table2.item(table2.focus())
-    # id_current = selected['values'][0]
-    select_item = table2.selection()[0]
-    values = table2.item(select_item, option='values')
-    # table2.item(select_item, text='', values=(entry_fio_id.get(), entry_place_work.get(),
-    #                                        entry_job_title.get(), entry_salary_advance.get(),
-    #                                        entry_salary.get(), entry_bet.get(), entry_vacation_pay.get()))
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
-    cursor.execute("""UPDATE info_employees SET fio_id= :fio_id, 
-                                                place_of_work= :place_of_work,
-                                                job_title= :job_title,
-                                                salary_advance= :salary_advance,
-                                                salary= :salary,
-                                                bet= :bet,
-                                                vacation_pay= :vacation_pay
-                                                WHERE id=:id""",
-                                    {
-                                        'fio_id': entry_fio_id.get(),
-                                        'place_of_work': entry_place_work.get(),
-                                        'job_title': entry_job_title.get(),
-                                        'salary_advance': entry_salary_advance.get(),
-                                        'salary': entry_salary.get(),
-                                        'bet': entry_bet.get(),
-                                        'vacation_pay': entry_vacation_pay.get(),
-                                        'id': table2.set(select_item, '#1')
-                                    })
-    conn.commit()
-    conn.close()
+    item_row = table.selection()
+    if item_row:
+        if not get_selected_row:
+            messagebox.showerror("Строка изменения не выброна", "Выберите строку для изменения")
+            return
+        reply = messagebox.askyesno('Успех', 'Выбранные вами данные будут изменены.\n'
+                                             'Действительно изменить?\n')
+        if reply:
+            tran_id = table.set(item_row, '#1')
+            date = ent_date.get()
+            fio = entry_fio.get()
+            for select in item_row:
+                ent_date.insert(0, select)
+                entry_fio.insert(0, select)
 
-# def update_data():
-#     item_row = table.selection()
-#     if item_row:
-#         if not get_selected_row:
-#             messagebox.showerror("Строка изменения не выброна", "Выберите строку для изменения")
-#             return
-#         reply = messagebox.askyesno('Успех', 'Измененные вами данные будут изменены.\n'
-#                                              'Действительно изменить?\n')
-#         if reply:
-#             tran_id = table.set(item_row, '#1')
-#             date = ent_date.get()
-#             fio = entry_fio.get()
-#             for select in item_row:
-#                 ent_date.insert(0, select)
-#                 entry_fio.insert(0, select)
-#
-#             with sqlite3.connect(db_name) as conn:
-#                 sqlite_update = """UPDATE employees SET date=?, fio=? WHERE id=?"""
-#                 cursor = conn.cursor()
-#                 cursor.execute(sqlite_update, (date, fio, tran_id))
-#             table.item(item_row, values=(tran_id, date, fio))
-#
-#     item_row2 = table2.selection()
-#     if item_row2:
-#         if not get_selected_row_table2:
-#             messagebox.showerror("Строка изменения не выброна", "Выберите строку для изменения")
-#             return
-#         reply = messagebox.askyesno('Успех', 'Измененные вами данные будут изменены.\n'
-#                                                          'Действительно изменить?\n')
-#         if reply:
-#             tran_id2 = table2.set(item_row2, '#1')
-#             fio_id = entry_fio_id.get()
-#             place_of_work = entry_place_work.get()
-#             job_title = entry_job_title.get()
-#             salary_advance = entry_salary_advance.get()
-#             salary = entry_salary.get()
-#             bet = entry_bet.get()
-#             vacation_pay = entry_vacation_pay.get()
-#             for selected in item_row2:
-#                 entry_fio_id.insert(0, selected)
-#                 entry_place_work.insert(0, selected)
-#                 entry_job_title.insert(0, selected)
-#                 entry_salary_advance.insert(0, selected)
-#                 entry_salary.insert(0, selected)
-#                 entry_bet.insert(0, selected)
-#                 entry_vacation_pay.insert(0, selected)
-#             sqlite_update_table2 = """UPDATE info_employees SET fio_id=?, place_of_work=?,
-#                                                                 job_title=?, salary_advance=?,
-#                                                                 salary=?, bet=?, vacation_pay=? WHERE id=?"""
-#             cursor.execute(sqlite_update_table2, (fio_id, place_of_work,
-#                                                   job_title, salary_advance,
-#                                                   salary, bet, vacation_pay, tran_id2))
-#             conn.commit()
-#             table2.item(item_row2, values=(tran_id2, fio_id, place_of_work, job_title, salary_advance, salary, bet, vacation_pay))
+            with sqlite3.connect(db_name) as conn:
+                sqlite_update = """UPDATE employees SET date=?, fio=? WHERE id=?"""
+                cursor = conn.cursor()
+                cursor.execute(sqlite_update, (date, fio, tran_id))
+            table.item(item_row, values=(tran_id, date, fio))
+            conn.commit()
+        else:
+            messagebox.showinfo('Error', 'В другой раз!!!')
+
+    select_item = table2.selection()
+    if select_item:
+        if not get_selected_row_table2:
+            messagebox.showerror("Строка изменения не выброна", "Выберите строку для изменения")
+            return
+        reply = messagebox.askyesno('Успех', 'Выбранные вами данные будут изменены.\n '
+                                             'Действительно изменить?\n')
+        if reply:
+            #  values = table2.item(select_item, option='values')
+            conn = sqlite3.connect(db_name)
+            cursor = conn.cursor()
+            cursor.execute("""UPDATE info_employees SET fio_id= :fio_id, 
+                                                                place_of_work= :place_of_work,
+                                                                job_title= :job_title,
+                                                                salary_advance= :salary_advance,
+                                                                salary= :salary,
+                                                                bet= :bet,
+                                                                vacation_pay= :vacation_pay
+                                                                WHERE id=:id""",
+                           {
+                               'fio_id': entry_fio_id.get(),
+                               'place_of_work': entry_place_work.get(),
+                               'job_title': entry_job_title.get(),
+                               'salary_advance': entry_salary_advance.get(),
+                               'salary': entry_salary.get(),
+                               'bet': entry_bet.get(),
+                               'vacation_pay': entry_vacation_pay.get(),
+                               'id': table2.set(select_item, '#1'),
+                           })
+            conn.commit()
+            conn.close()
+            add_id = select_item[-1:]
+            table2.item(select_item, values=(add_id, entry_fio_id.get(), entry_place_work.get(),
+                                             entry_job_title.get(), entry_salary_advance.get(), entry_salary.get(),
+                                             entry_bet.get(), entry_vacation_pay.get()))
+        else:
+            messagebox.showinfo('Error', 'В другой раз!!!')
+
 
 def search():
    search_window = tk.Tk()
@@ -348,12 +328,6 @@ def current_row(event):
     for row_info in rows_info:
 
         table2.insert('', tk.END, values=row_info)
-
-
-# def show_table2():
-#     current_item = table.item(table.focus())
-#     print(current_item)
-#     table.bind('<ButtonRelease-1>', show_table2())
 
 
 # table.heading('#0', text='')
