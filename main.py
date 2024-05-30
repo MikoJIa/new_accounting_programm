@@ -28,31 +28,32 @@ def add_to_table():
             salary = entry_salary.get()
             bet = entry_bet.get()
             vacation_pay = entry_vacation_pay.get()
-            if check_data(fio_id):
-                with sqlite3.connect(db_name) as sqlite_conn:
-                    sqlite_conn.execute('PRAGMA foreign_keys = ON')
-                    insert_table = """INSERT INTO employees(
-                    date, fio) VALUES(?, ?)"""
-                    cursor = sqlite_conn.cursor()
-                    cursor.execute(insert_table, (date, fio))
-                    sqlite_conn.commit()
-                with sqlite3.connect(db_name) as sqlite_conn2:
-                    sqlite_conn2.execute('PRAGMA foreign_keys = ON')
-                    insert_table2 = """INSERT INTO info_employees(fio_id,
-                    place_of_work, job_title, salary_advance, salary, bet, vacation_pay)
-                     VALUES(?, ?, ?, ?, ?, ?, ?)"""
-                    cursor = sqlite_conn2.cursor()
-                    cursor.execute(insert_table2, (fio_id, place_of_work, job_title,
-                                                    salary_advance, salary, bet, vacation_pay))
-                    sqlite_conn2.commit()
-                    add_id = cursor.lastrowid
-                    if check_data(fio_id):
-                        messagebox.showinfo('Успех', 'Новая информация добавлена. Такое id- уже существует')
-                    else:
-                        table.insert('', tk.END, values=(add_id, date, fio))
-                        ent_date.delete(0, tk.END)
-                        entry_fio.delete(0, tk.END)
-                        messagebox.showinfo('Успех', 'Новая информация добавлена')
+            if check_name(date, fio):
+                if check_data(fio_id):
+                    with sqlite3.connect(db_name) as sqlite_conn:
+                        sqlite_conn.execute('PRAGMA foreign_keys = ON')
+                        insert_table = """INSERT INTO employees(
+                        date, fio) VALUES(?, ?)"""
+                        cursor = sqlite_conn.cursor()
+                        cursor.execute(insert_table, (date, fio))
+                        sqlite_conn.commit()
+                    with sqlite3.connect(db_name) as sqlite_conn2:
+                        sqlite_conn2.execute('PRAGMA foreign_keys = ON')
+                        insert_table2 = """INSERT INTO info_employees(fio_id,
+                        place_of_work, job_title, salary_advance, salary, bet, vacation_pay)
+                         VALUES(?, ?, ?, ?, ?, ?, ?)"""
+                        cursor = sqlite_conn2.cursor()
+                        cursor.execute(insert_table2, (fio_id, place_of_work, job_title,
+                                                        salary_advance, salary, bet, vacation_pay))
+                        sqlite_conn2.commit()
+                        add_id = cursor.lastrowid
+                        if check_data(fio_id):
+                            messagebox.showinfo('Успех', 'Новая информация добавлена. Такое id- уже существует')
+                        else:
+                            table.insert('', tk.END, values=(add_id, date, fio))
+                            ent_date.delete(0, tk.END)
+                            entry_fio.delete(0, tk.END)
+                            messagebox.showinfo('Успех', 'Новая информация добавлена')
             else:
                 save_data()
         else:
@@ -66,6 +67,7 @@ def add_to_table():
 def check_data(fio_id):
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
+
     cursor.execute("""SELECT fio_id FROM info_employees WHERE fio_id=?""", (fio_id))
     row = cursor.fetchone()
     conn.close()
@@ -73,6 +75,19 @@ def check_data(fio_id):
         return False
     else:
         return True
+
+
+def check_name(date, fio):
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    cursor.execute("""INSERT INTO employees(date, fio) VALUES(?, ?)""", (date, fio))
+    conn.commit()
+    cursor.execute("""SELECT id FROM employees WHERE fio=? and date=?""", (fio, date))
+    id_name = cursor.fetchone()
+    conn.close()
+    if id_name:
+        return False
+    return True
 
 
 def save_data():
@@ -87,10 +102,10 @@ def save_data():
     vacation_pay = entry_vacation_pay.get()
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
-    # cursor.execute('PRAGMA foreign_keys = ON')
+    cursor.execute('PRAGMA foreign_keys = ON')
     # if check_name(fio):
-    # cursor.execute("""INSERT INTO employees(date, fio) VALUES(?, ?)""", (date, fio))
-    # conn.commit()
+    #     cursor.execute("""INSERT INTO employees(date, fio) VALUES(?, ?)""", (date, fio))
+    #     conn.commit()
 
     cursor.execute('PRAGMA foreign_keys = ON')
     cursor.execute("""INSERT INTO info_employees (fio_id, place_of_work, job_title,
@@ -110,6 +125,8 @@ def get_selected_row(event):
         ent_date.insert(tk.END, content[1])
         entry_fio.delete(0, tk.END)
         entry_fio.insert(tk.END, content[2])
+        entry_fio_id.delete(0, tk.END)
+        entry_fio_id.insert(tk.END, content[0])
 
 
 def get_selected_row_table2(event):
@@ -134,11 +151,11 @@ def get_selected_row_table2(event):
 
 def on_select(event):
     select_item = table2.selection()[0]
-    select_item_table1 = table.selection()[0]
+    select_item_table1 = table.selection()
     if select_item:
         values = table2.item(select_item, option='values')
     table.selection_remove(select_item_table1)
-    print(values, select_item[-1:])
+    # print(values, select_item[-1:])
 
 
 def update_data():
@@ -203,6 +220,30 @@ def update_data():
                                              entry_bet.get(), entry_vacation_pay.get()))
         else:
             messagebox.showinfo('Error', 'В другой раз!!!')
+
+
+def delete_data():
+    id_fio = table.item(table.focus())
+    cur_id = id_fio['values'][0]
+    print(cur_id)
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    cursor.execute(f"""SELECT fio_id FROM info_employees WHERE fio_id={cur_id}""")
+    count = len(cursor.fetchall())
+
+    if count > 0:
+        messagebox.showerror("Error", 'Эту запись вы удалить не можете!!!')
+    else:
+        curr_row = table2.item(table2.focus())
+        if curr_row:
+            id_name = curr_row['values'][0]
+            cursor.execute(f"""DELETE FROM info_employees WHERE id={id_name}""")
+            conn.commit()
+            conn.close()
+
+
+
+
 
 
 def search():
@@ -273,7 +314,7 @@ btn_add_to_db = tk.Button(master=up_frame, text='Добавить', font=('Aria'
                           width=15, bg='#E3CF57', command=add_to_table)
 btn_add_to_db.place(x=890, y=4)
 
-btn_delete = tk.Button(master=up_frame, text='Удалить', font=('Aria', 12, 'bold'), width=15, bg='#FF4040')
+btn_delete = tk.Button(master=up_frame, text='Удалить', font=('Aria', 12, 'bold'), width=15, bg='#FF4040', command=delete_data)
 btn_delete.place(x=890, y=42)
 
 btn_update = tk.Button(master=up_frame, text='Изменить', font=('Aria', 12, 'bold'), width=15, bg='#CAFF70',
