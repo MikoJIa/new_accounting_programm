@@ -28,32 +28,33 @@ def add_to_table():
             salary = entry_salary.get()
             bet = entry_bet.get()
             vacation_pay = entry_vacation_pay.get()
-            if check_name(date, fio):
-                if check_data(fio_id):
-                    with sqlite3.connect(db_name) as sqlite_conn:
-                        sqlite_conn.execute('PRAGMA foreign_keys = ON')
-                        insert_table = """INSERT INTO employees(
-                        date, fio) VALUES(?, ?)"""
-                        cursor = sqlite_conn.cursor()
-                        cursor.execute(insert_table, (date, fio))
-                        sqlite_conn.commit()
-                    with sqlite3.connect(db_name) as sqlite_conn2:
-                        sqlite_conn2.execute('PRAGMA foreign_keys = ON')
-                        insert_table2 = """INSERT INTO info_employees(fio_id,
-                        place_of_work, job_title, salary_advance, salary, bet, vacation_pay)
-                         VALUES(?, ?, ?, ?, ?, ?, ?)"""
-                        cursor = sqlite_conn2.cursor()
-                        cursor.execute(insert_table2, (fio_id, place_of_work, job_title,
-                                                        salary_advance, salary, bet, vacation_pay))
-                        sqlite_conn2.commit()
-                        add_id = cursor.lastrowid
-                        if check_data(fio_id):
-                            messagebox.showinfo('Успех', 'Новая информация добавлена. Такое id- уже существует')
-                        else:
-                            table.insert('', tk.END, values=(add_id, date, fio))
-                            ent_date.delete(0, tk.END)
-                            entry_fio.delete(0, tk.END)
-                            messagebox.showinfo('Успех', 'Новая информация добавлена')
+            if checking_the_record() is True:
+                if check_name(date, fio):
+                    if check_data(fio_id):
+                            with sqlite3.connect(db_name) as sqlite_conn:
+                                sqlite_conn.execute('PRAGMA foreign_keys = ON')
+                                insert_table = """INSERT INTO employees(
+                                date, fio) VALUES(?, ?)"""
+                                cursor = sqlite_conn.cursor()
+                                cursor.execute(insert_table, (date, fio))
+                                sqlite_conn.commit()
+                            with sqlite3.connect(db_name) as sqlite_conn2:
+                                sqlite_conn2.execute('PRAGMA foreign_keys = ON')
+                                insert_table2 = """INSERT INTO info_employees(fio_id,
+                                place_of_work, job_title, salary_advance, salary, bet, vacation_pay)
+                                 VALUES(?, ?, ?, ?, ?, ?, ?)"""
+                                cursor = sqlite_conn2.cursor()
+                                cursor.execute(insert_table2, (fio_id, place_of_work, job_title,
+                                                                salary_advance, salary, bet, vacation_pay))
+                                sqlite_conn2.commit()
+                                add_id = cursor.lastrowid
+                                if check_data(fio_id):
+                                    messagebox.showinfo('Успех', 'Новая информация добавлена. Такое id- уже существует')
+                                else:
+                                    table.insert('', tk.END, values=(add_id, date, fio))
+                                    ent_date.delete(0, tk.END)
+                                    entry_fio.delete(0, tk.END)
+                                    messagebox.showinfo('Успех', 'Новая информация добавлена')
             else:
                 save_data()
         else:
@@ -80,7 +81,7 @@ def check_data(fio_id):
 def check_name(date, fio):
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
-    cursor.execute("""INSERT INTO employees(date, fio) VALUES(?, ?)""", (date, fio))
+    cursor.execute("""INSERT OR IGNORE INTO employees(date, fio) VALUES(?, ?)""", (date, fio))
     conn.commit()
     cursor.execute("""SELECT id FROM employees WHERE fio=? and date=?""", (fio, date))
     id_name = cursor.fetchone()
@@ -102,7 +103,7 @@ def save_data():
     vacation_pay = entry_vacation_pay.get()
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
-    cursor.execute('PRAGMA foreign_keys = ON')
+    # cursor.execute('PRAGMA foreign_keys = ON')
     # if check_name(fio):
     #     cursor.execute("""INSERT INTO employees(date, fio) VALUES(?, ?)""", (date, fio))
     #     conn.commit()
@@ -222,22 +223,43 @@ def update_data():
             messagebox.showinfo('Error', 'В другой раз!!!')
 
 
+# Проверка на наличие повторяющейся записи в первой таблице
+def checking_the_record():
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    fio_id = entry_fio_id.get()
+    id_of_the_row = None
+    for row in cursor.execute(f"""SELECT * FROM employees WHERE id={fio_id}"""):
+        id_of_the_row = row[0]
+    if id_of_the_row is None:
+        return True
+    return False
+
 def delete_data():
     id_fio = table.item(table.focus())
     cur_id = id_fio['values'][0]
-    print(cur_id)
+    # print(cur_id)
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
     cursor.execute(f"""SELECT fio_id FROM info_employees WHERE fio_id={cur_id}""")
     count = len(cursor.fetchall())
 
-    if count > 0:
-        messagebox.showerror("Error", 'Эту запись вы удалить не можете!!!')
+    curr_row = table.item(table.focus())
+
+    if not curr_row:
+        if count > 0:
+            messagebox.showerror("Error", 'Эту запись вы удалить не можете!!!\n'
+                                 'У текущей записи есть значения во второй таблице')
+    curr_row = table2.item(table2.focus())
+    if curr_row:
+        print(curr_row)
+        id_name = curr_row['values'][0]
+        cursor.execute(f"""DELETE FROM info_employees WHERE id={id_name}""")
+        conn.commit()
+        conn.close()
     else:
-        curr_row = table2.item(table2.focus())
-        if curr_row:
-            id_name = curr_row['values'][0]
-            cursor.execute(f"""DELETE FROM info_employees WHERE id={id_name}""")
+        if count == 0:
+            conn.execute("""DELETE FROM employees""")
             conn.commit()
             conn.close()
 
