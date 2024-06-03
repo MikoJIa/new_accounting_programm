@@ -19,6 +19,7 @@ def add_to_table():
     if all(lst_get):
         reply = messagebox.askyesno('Успех', 'Действительно добавить?')
         if reply == True:
+            appointment_date = ent_date.get()
             date = ent_date.get()
             fio = entry_fio.get()
             fio_id = entry_fio_id.get()
@@ -31,30 +32,39 @@ def add_to_table():
             if checking_the_record() is True:
                 if check_name(date, fio):
                     if check_data(fio_id):
-                            with sqlite3.connect(db_name) as sqlite_conn:
-                                sqlite_conn.execute('PRAGMA foreign_keys = ON')
-                                insert_table = """INSERT INTO employees(
-                                date, fio) VALUES(?, ?)"""
-                                cursor = sqlite_conn.cursor()
-                                cursor.execute(insert_table, (date, fio))
-                                sqlite_conn.commit()
-                            with sqlite3.connect(db_name) as sqlite_conn2:
-                                sqlite_conn2.execute('PRAGMA foreign_keys = ON')
-                                insert_table2 = """INSERT INTO info_employees(fio_id,
-                                place_of_work, job_title, salary_advance, salary, bet, vacation_pay)
-                                 VALUES(?, ?, ?, ?, ?, ?, ?)"""
-                                cursor = sqlite_conn2.cursor()
-                                cursor.execute(insert_table2, (fio_id, place_of_work, job_title,
-                                                                salary_advance, salary, bet, vacation_pay))
-                                sqlite_conn2.commit()
-                                add_id = cursor.lastrowid
-                                if check_data(fio_id):
-                                    messagebox.showinfo('Успех', 'Новая информация добавлена. Такое id- уже существует')
-                                else:
-                                    table.insert('', tk.END, values=(add_id, date, fio))
-                                    ent_date.delete(0, tk.END)
-                                    entry_fio.delete(0, tk.END)
-                                    messagebox.showinfo('Успех', 'Новая информация добавлена')
+                        with sqlite3.connect(db_name) as sqlite_conn:
+                            sqlite_conn.execute('PRAGMA foreign_keys = ON')
+                            insert_table = """INSERT INTO employees(
+                            appointment_date, fio) VALUES(?, ?)"""
+                            cursor = sqlite_conn.cursor()
+                            cursor.execute(insert_table, (appointment_date, fio))
+                            sqlite_conn.commit()
+                            conn = sqlite3.connect(db_name)
+                            cursor1 = conn.cursor()
+                            [table.delete(i) for i in table.get_children()]
+                            cursor1.execute("""SELECT * FROM employees ORDER BY appointment_date""")
+                            rows = cursor1.fetchall()
+                            print(rows)
+                            for row in rows:
+                                table.insert('', tk.END, values=row)
+                        with sqlite3.connect(db_name) as sqlite_conn2:
+                            sqlite_conn2.execute('PRAGMA foreign_keys = ON')
+                            insert_table2 = """INSERT INTO info_employees(date, fio_id,
+                            place_of_work, job_title, salary_advance, salary, bet, vacation_pay)
+                             VALUES(?, ?, ?, ?, ?, ?, ?, ?)"""
+                            cursor = sqlite_conn2.cursor()
+                            cursor.execute(insert_table2, (date, fio_id, place_of_work, job_title,
+                                                            salary_advance, salary, bet, vacation_pay))
+                            sqlite_conn2.commit()
+                            add_id = cursor.lastrowid
+                            if check_data(fio_id):
+                                messagebox.showinfo('Успех', 'Новая информация добавлена. Такое id- уже существует')
+                            else:
+                                table.insert('', tk.END, values=(add_id, date, fio))
+                                ent_date.delete(0, tk.END)
+                                entry_fio.delete(0, tk.END)
+                                messagebox.showinfo('Успех', 'Новая информация добавлена')
+
             else:
                 save_data()
         else:
@@ -81,9 +91,9 @@ def check_data(fio_id):
 def check_name(date, fio):
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
-    cursor.execute("""INSERT OR IGNORE INTO employees(date, fio) VALUES(?, ?)""", (date, fio))
+    cursor.execute("""INSERT OR IGNORE INTO employees(appointment_date, fio) VALUES(?, ?)""", (date, fio))
     conn.commit()
-    cursor.execute("""SELECT id FROM employees WHERE fio=? and date=?""", (fio, date))
+    cursor.execute("""SELECT id FROM employees WHERE fio=? and appointment_date=?""", (fio, date))
     id_name = cursor.fetchone()
     conn.close()
     if id_name:
@@ -109,14 +119,23 @@ def save_data():
     #     conn.commit()
 
     cursor.execute('PRAGMA foreign_keys = ON')
-    cursor.execute("""INSERT INTO info_employees (fio_id, place_of_work, job_title,
+    cursor.execute("""INSERT INTO info_employees (date, fio_id, place_of_work, job_title,
                     salary_advance, salary,
-                    bet, vacation_pay) VALUES(?, ?, ?, ?, ?, ?, ?)""",
-                   (fio_id, place_of_work, job_title,
+                    bet, vacation_pay) VALUES(?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (date, fio_id, place_of_work, job_title,
                     salary_advance, salary, bet, vacation_pay)
                    )
     conn.commit()
     conn.close()
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    curr_row = table2.item(table2.focus())
+    table2.delete(*table2.get_children())
+    id_row = curr_row['values'][2]
+    cursor.execute(f"""SELECT * FROM info_employees WHERE fio_id={id_row}""")
+    rows = cursor.fetchall()
+    for row in rows:
+        table2.insert('', tk.END, values=row)
 
 
 def get_selected_row(event):
@@ -135,19 +154,19 @@ def get_selected_row_table2(event):
         item = table2.selection()[0]
         content2 = table2.item(item, 'values')
         entry_fio_id.delete(0, tk.END)
-        entry_fio_id.insert(0, content2[1])
+        entry_fio_id.insert(0, content2[2])
         entry_place_work.delete(0, tk.END)
-        entry_place_work.insert(0, content2[2])
+        entry_place_work.insert(0, content2[3])
         entry_job_title.delete(0, tk.END)
-        entry_job_title.insert(0, content2[3])
+        entry_job_title.insert(0, content2[4])
         entry_salary_advance.delete(0, tk.END)
-        entry_salary_advance.insert(0, content2[4])
+        entry_salary_advance.insert(0, content2[5])
         entry_salary.delete(0, tk.END)
-        entry_salary.insert(0, content2[5])
+        entry_salary.insert(0, content2[6])
         entry_bet.delete(0, tk.END)
-        entry_bet.insert(0, content2[6])
+        entry_bet.insert(0, content2[7])
         entry_vacation_pay.delete(0, tk.END)
-        entry_vacation_pay.insert(0, content2[7])
+        entry_vacation_pay.insert(0, content2[8])
 
 
 def on_select(event):
@@ -195,7 +214,8 @@ def update_data():
             #  values = table2.item(select_item, option='values')
             conn = sqlite3.connect(db_name)
             cursor = conn.cursor()
-            cursor.execute("""UPDATE info_employees SET fio_id= :fio_id, 
+            cursor.execute("""UPDATE info_employees SET date= :date, 
+                                                                fio_id= :fio_id, 
                                                                 place_of_work= :place_of_work,
                                                                 job_title= :job_title,
                                                                 salary_advance= :salary_advance,
@@ -204,6 +224,7 @@ def update_data():
                                                                 vacation_pay= :vacation_pay
                                                                 WHERE id=:id""",
                            {
+                               'date': ent_date.get(),
                                'fio_id': entry_fio_id.get(),
                                'place_of_work': entry_place_work.get(),
                                'job_title': entry_job_title.get(),
@@ -216,7 +237,7 @@ def update_data():
             conn.commit()
             conn.close()
             add_id = select_item[-1:]
-            table2.item(select_item, values=(add_id, entry_fio_id.get(), entry_place_work.get(),
+            table2.item(select_item, values=(ent_date.get(), entry_fio_id.get(), entry_place_work.get(),
                                              entry_job_title.get(), entry_salary_advance.get(), entry_salary.get(),
                                              entry_bet.get(), entry_vacation_pay.get()))
         else:
@@ -227,6 +248,8 @@ def update_data():
 def checking_the_record():
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
+    item_row = table.selection()
+    print(item_row)
     fio_id = entry_fio_id.get()
     id_of_the_row = None
     for row in cursor.execute(f"""SELECT * FROM employees WHERE id={fio_id}"""):
@@ -234,6 +257,7 @@ def checking_the_record():
     if id_of_the_row is None:
         return True
     return False
+
 
 def delete_data():
     id_fio = table.item(table.focus())
@@ -244,28 +268,66 @@ def delete_data():
     cursor.execute(f"""SELECT fio_id FROM info_employees WHERE fio_id={cur_id}""")
     count = len(cursor.fetchall())
 
-    curr_row = table.item(table.focus())
+    # curr_row = table.item(table.focus())
+    # #curr_row = table.selection()[0]
+    #
+    # if curr_row:
+    #     if count > 0:
+    #         action = messagebox.showerror("Error", 'Эту запись вы удалить не можете!!!\n'
+    #                              'У текущей записи есть значения во второй таблице')
 
-    if not curr_row:
-        if count > 0:
-            messagebox.showerror("Error", 'Эту запись вы удалить не можете!!!\n'
-                                 'У текущей записи есть значения во второй таблице')
+
     curr_row = table2.item(table2.focus())
     if curr_row:
-        print(curr_row)
-        id_name = curr_row['values'][0]
-        cursor.execute(f"""DELETE FROM info_employees WHERE id={id_name}""")
-        conn.commit()
-        conn.close()
-    else:
+        item_row = table2.selection()
+        if item_row:
+            action = messagebox.askyesno('info', 'Вы действительно хотите удалить?')
+            if action == True:
+                id_name = curr_row['values'][0]
+                cursor.execute(f"""DELETE FROM info_employees WHERE id={id_name}""")
+                conn.commit()
+                conn.close()
+                conn = sqlite3.connect(db_name)
+                cursor = conn.cursor()
+                messagebox.showinfo('Success', 'Информация успешно удалена!')
+                table2.delete(*table2.get_children())
+                id_row = curr_row['values'][2]
+                cursor.execute(f"""SELECT * FROM info_employees WHERE fio_id={id_row}""")
+                rows = cursor.fetchall()
+                for row in rows:
+                    table2.insert('', tk.END, values=row)
+                conn.close()
+
+            else:
+                messagebox.showinfo('Error1', 'В другой раз!')
+    curr_row = table.item(table.focus())
+    if curr_row:
         if count == 0:
-            conn.execute("""DELETE FROM employees""")
-            conn.commit()
-            conn.close()
+            action1 = messagebox.askyesno('Удаление', 'Вы действительно хотите удалить?')
+            if action1 == True:
+                id_item = curr_row['values'][0]
+                cursor.execute(f"""DELETE FROM employees WHERE id={id_item}""")
+                conn.commit()
+                conn.close()
+                conn = sqlite3.connect(db_name)
+                cursor = conn.cursor()
+                [table.delete(i) for i in table.get_children()]
+                cursor.execute(f"""SELECT * FROM employees""")
+                rows = cursor.fetchall()
+                for row in rows:
+                    table.insert('', tk.END, values=row)
+                messagebox.showinfo('Успех', 'Информация успешно удалена')
+            else:
+                messagebox.showinfo('Error111', 'В другой раз!')
+    else:
+        messagebox.showinfo('info', 'В другой раз!')
 
-
-
-
+    # curr_row = table.item(table.focus())
+    curr_row = table.selection()
+    if curr_row:
+        if count > 0:
+            action = messagebox.showerror("Error", 'Эту запись вы удалить не можете!!!\n'
+                                                   'У текущей записи есть значения во второй таблице')
 
 
 def search():
@@ -279,6 +341,28 @@ def search():
    search_btn = tk.Button(master=search_window, text='Найти', width=10,
                             font=('arial', 20, 'bold'), relief=tk.RAISED, borderwidth=5)
    search_btn.place(x=112, y=120)
+
+
+def main_page():
+    [table.delete(x) for x in table.get_children()]
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    cursor.execute("""SELECT * FROM employees ORDER BY appointment_date""")
+    rows = cursor.fetchall()
+    for row in rows:
+        table.insert('', tk.END, values=row)
+
+
+def clear_rows():
+    ent_date.delete(0, tk.END)
+    entry_fio.delete(0, tk.END)
+    entry_fio_id.delete(0, tk.END)
+    entry_place_work.delete(0, tk.END)
+    entry_job_title.delete(0, tk.END)
+    entry_salary_advance.delete(0, tk.END)
+    entry_salary.delete(0, tk.END)
+    entry_bet.delete(0, tk.END)
+    entry_vacation_pay.delete(0, tk.END)
 
 
 up_frame = tk.Frame(master=window,
@@ -343,10 +427,12 @@ btn_update = tk.Button(master=up_frame, text='Изменить', font=('Aria', 1
                        command=update_data)
 btn_update.place(x=890, y=80)
 
-btn_clear = tk.Button(master=up_frame, text='Очистить поля', font=('Aria', 12, 'bold'), width=15, bg='#CAFF70')
+btn_clear = tk.Button(master=up_frame, text='Очистить поля', font=('Aria', 12, 'bold'), width=15, bg='#CAFF70',
+                      command=clear_rows)
 btn_clear.place(x=1060, y=4)
 
-btn_return_main = tk.Button(master=up_frame, text='Главная', font=('Aria', 12, 'bold'), width=15, bg='#CAFF70')
+btn_return_main = tk.Button(master=up_frame, text='Главная', font=('Aria', 12, 'bold'), width=15, bg='#CAFF70',
+                            command=main_page)
 btn_return_main.place(x=1060, y=42)
 
 btn_search = tk.Button(master=up_frame, text='Поиск',
@@ -362,7 +448,7 @@ right_frame.pack(side=tk.RIGHT, fill='y')
 
 # treeview 1
 
-table = ttk.Treeview(left_frame, columns=('id', 'date', 'fio'), show='headings')
+table = ttk.Treeview(left_frame, columns=('id', 'appointment_date', 'fio'), show='headings')
 table.pack(side=tk.LEFT, fill=tk.BOTH)
 # table['columns'] = ('id', 'date', 'fio')
 
@@ -373,8 +459,8 @@ scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
 # table.column('#0', anchor='c', width=0)
 table.column('id', anchor='c', width=40)
-table.column('date', anchor='c', width=200)
-table.column('fio', anchor='c', width=200)
+table.column('appointment_date', anchor='c', width=200)
+table.column('fio', anchor='w', width=200)
 
 
 def current_row(event):
@@ -395,13 +481,14 @@ def current_row(event):
 
 # table.heading('#0', text='')
 table.heading('id', text='ID')
-table.heading('date', text='Дата')
+table.heading('appointment_date', text='Дата назначения')
 table.heading('fio', text='Ф.И.О')
 table.bind('<ButtonRelease-1>', current_row)
 table.bind("<<TreeviewSelect>>", get_selected_row)
 
+
 # treeview 2
-table2 = ttk.Treeview(right_frame, columns=('id','fio_id', 'place_of_work',
+table2 = ttk.Treeview(right_frame, columns=('id', 'date', 'fio_id', 'place_of_work',
                                             'job_title', 'salary_advance',
                                             'salary', 'bet', 'vacation_pay'), show='headings')
 table2.pack(side=tk.RIGHT, fill=tk.BOTH)
@@ -410,7 +497,8 @@ table2.pack(side=tk.RIGHT, fill=tk.BOTH)
 #                      'salary', 'bet', 'vacation_pay')
 
 # table2.column('#0', width=0)
-table2.column('id', anchor='c', width=40)
+table2.column('id', anchor='c', width=25)
+table2.column('date', anchor='c', width=60)
 table2.column('fio_id', anchor='c', width=50)
 table2.column('place_of_work', anchor='c', width=150)
 table2.column('job_title', anchor='c', width=150)
@@ -421,6 +509,7 @@ table2.column('vacation_pay', anchor='c', width=100)
 
 # table2.heading('#0', text='')
 table2.heading('id', text='ID')
+table2.heading('date', text='Дата')
 table2.heading('fio_id', text='ФИО_id')
 table2.heading('place_of_work', text='Место работы')
 table2.heading('job_title', text='Должность')
@@ -440,7 +529,7 @@ try:
             sql_request = """
              CREATE TABLE IF NOT EXISTS employees(
              id INTEGER PRIMARY KEY AUTOINCREMENT,
-             date DATE NOT NULL,
+             appointment_date DATE NOT NULL,
              fio TEXT NOT NULL
              )"""
             cursor = sqlite_conn.cursor()
@@ -461,6 +550,7 @@ try:
         sqlite_conn.execute("PRAGMA foreign_keys = ON")
         create_table = """CREATE TABLE IF NOT EXISTS info_employees(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        date DATE,
         fio_id INTEGER,
         place_of_work TEXT,
         job_title TEXT,
@@ -482,20 +572,24 @@ finally:
     if sqlite_conn:
         print('Sqlite close!!!')
 
-with sqlite3.connect(db_name) as sqlite_conn:
-    display_db = """SELECT id, date, fio FROM employees ORDER BY date"""
-    cursor = sqlite_conn.cursor()
-    cursor.execute(display_db)
-    rows = cursor.fetchall()
-    rows_name = []
-    item = []
-    for row in rows:
-        if row[2] not in rows_name:
-            rows_name.append(row[2])
-            item.append(row)
-        else:
-            rows_name = rows_name
-    for i in item:
-        table.insert('', tk.END, values=i)
 
+def display_date():
+    with sqlite3.connect(db_name) as sqlite_conn:
+        display_db = """SELECT id, appointment_date, fio FROM employees ORDER BY appointment_date"""
+        cursor = sqlite_conn.cursor()
+        cursor.execute(display_db)
+        rows = cursor.fetchall()
+        rows_name = []
+        item = []
+        for row in rows:
+            if row[2] not in rows_name:
+                rows_name.append(row[2])
+                item.append(row)
+            else:
+                rows_name = rows_name
+        for i in item:
+            table.insert('', tk.END, values=i)
+
+
+display_date()
 window.mainloop()
