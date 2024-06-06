@@ -3,13 +3,15 @@ import os
 from tkinter import ttk
 import tkinter as tk
 from datetime import datetime
+
 from tkcalendar import DateEntry
 from tkinter import messagebox
 
 
 window = tk.Tk()
 window.title('Мини бухгалтерия')
-window.geometry('1450x800')
+window.geometry('1550x800')
+image = tk.PhotoImage(file='logo.png')
 
 db_name = 'accounting.db'
 
@@ -195,7 +197,7 @@ def update_data():
                 entry_fio.insert(0, select)
 
             with sqlite3.connect(db_name) as conn:
-                sqlite_update = """UPDATE employees SET date=?, fio=? WHERE id=?"""
+                sqlite_update = """UPDATE employees SET appointment_date=?, fio=? WHERE id=?"""
                 cursor = conn.cursor()
                 cursor.execute(sqlite_update, (date, fio, tran_id))
             table.item(item_row, values=(tran_id, date, fio))
@@ -335,12 +337,27 @@ def search():
    search_window.title('Окно поиска')
    search_window.geometry('400x250')
    search_window['bg'] = '#EEEED1'
+   global search_entry
    search_entry = tk.Entry(master=search_window, width=20,
                            font=('Arial', 20, 'bold'), relief=tk.SUNKEN, borderwidth=5)
    search_entry.place(x=50, y=50)
    search_btn = tk.Button(master=search_window, text='Найти', width=10,
-                            font=('arial', 20, 'bold'), relief=tk.RAISED, borderwidth=5)
+                            font=('arial', 20, 'bold'), relief=tk.RAISED, borderwidth=5, command=search_name)
    search_btn.place(x=112, y=120)
+   return search_entry
+
+
+def search_name():
+    keyword = search_entry.get()
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+    cursor.execute("""SELECT * FROM employees WHERE fio LIKE ?""",
+                   ('%' + keyword + '%',))
+    result = cursor.fetchall()
+    [table.delete(i) for i in table.get_children()]
+    for row in result:
+        table.insert('', tk.END, values=row)
+
 
 
 def main_page():
@@ -365,10 +382,23 @@ def clear_rows():
     entry_vacation_pay.delete(0, tk.END)
 
 
+def sorted_date(number_col, reverse):
+    lst = [(table.set(i, number_col), i) for i in table.get_children('')]
+    lst.sort(key=lambda k: datetime.strptime(k[0], '%d.%m.%y'), reverse=reverse)
+    print(lst)
+    for index, (_, item) in enumerate(lst):
+        table.move(item, '', index)
+    table.heading(number_col, command=lambda: sorted_date(number_col, not reverse))
+
+
+
 up_frame = tk.Frame(master=window,
                      relief=tk.SOLID,
                      borderwidth=2, bg='black')
 up_frame.pack(anchor='nw', fill='x', padx=5, pady=5)
+
+label_img = tk.Label(master=up_frame, image=image, bg='black')
+label_img.place(relx=0.82, rely=0.1)
 
 lbl_date = tk.Label(master=up_frame, text='Дата', font=('Aria', 12, 'bold'), bg='black', fg='yellow')
 lbl_date.grid(row=0, column=0, sticky='e')
@@ -481,7 +511,7 @@ def current_row(event):
 
 # table.heading('#0', text='')
 table.heading('id', text='ID')
-table.heading('appointment_date', text='Дата назначения')
+table.heading('appointment_date', text='Дата назначения', command=lambda: sorted_date(1, False))
 table.heading('fio', text='Ф.И.О')
 table.bind('<ButtonRelease-1>', current_row)
 table.bind("<<TreeviewSelect>>", get_selected_row)
