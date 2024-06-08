@@ -13,7 +13,7 @@ window.title('Мини бухгалтерия')
 window.geometry('1550x800')
 image = tk.PhotoImage(file='logo.png')
 
-db_name = 'accounting.db'
+db_name = 'accounting_1.db'
 
 
 def add_to_table():
@@ -155,6 +155,9 @@ def get_selected_row_table2(event):
     if table2.selection():
         item = table2.selection()[0]
         content2 = table2.item(item, 'values')
+        print(content2)
+        ent_date.delete(0, tk.END)
+        ent_date.insert(0, content2[1])
         entry_fio_id.delete(0, tk.END)
         entry_fio_id.insert(0, content2[2])
         entry_place_work.delete(0, tk.END)
@@ -217,14 +220,14 @@ def update_data():
             conn = sqlite3.connect(db_name)
             cursor = conn.cursor()
             cursor.execute("""UPDATE info_employees SET date= :date, 
-                                                                fio_id= :fio_id, 
-                                                                place_of_work= :place_of_work,
-                                                                job_title= :job_title,
-                                                                salary_advance= :salary_advance,
-                                                                salary= :salary,
-                                                                bet= :bet,
-                                                                vacation_pay= :vacation_pay
-                                                                WHERE id=:id""",
+                                                             fio_id= :fio_id, 
+                                                             place_of_work= :place_of_work,
+                                                             job_title= :job_title,
+                                                             salary_advance= :salary_advance,
+                                                             salary= :salary,
+                                                             bet= :bet,
+                                                             vacation_pay= :vacation_pay
+                                                             WHERE id=:id""",
                            {
                                'date': ent_date.get(),
                                'fio_id': entry_fio_id.get(),
@@ -238,8 +241,8 @@ def update_data():
                            })
             conn.commit()
             conn.close()
-            add_id = select_item[-1:]
-            table2.item(select_item, values=(ent_date.get(), entry_fio_id.get(), entry_place_work.get(),
+            add_id = table2.set(select_item, '#1')
+            table2.item(select_item, values=(add_id, ent_date.get(), entry_fio_id.get(), entry_place_work.get(),
                                              entry_job_title.get(), entry_salary_advance.get(), entry_salary.get(),
                                              entry_bet.get(), entry_vacation_pay.get()))
         else:
